@@ -40,6 +40,7 @@ public class ScrabbleSolver {
 
         String str = s.toString();
 
+        // Blanks! For each blank, choose A-Z and solve each.
         for (int i = 0; i < s.length(); i++) {
             if (s.charAt(i) == '*') {
                 for (char c : ALPHABET.toCharArray()) {
@@ -51,6 +52,7 @@ public class ScrabbleSolver {
             }
         }
 
+        // Check if match and output if match is unique.
         if (!FOUND.containsKey(str) && DICTIONARY.contains(str)) {
             if (str.length() >= minSize) {
                 System.out.println(str);
@@ -58,12 +60,15 @@ public class ScrabbleSolver {
             FOUND.put(str, true);
         }
 
+        // Select each character in turn and swap it to the start of this iteration level.
+        // Solve the remainder of the sequence.
         for (int i = idx; i < s.length(); i++) {
             swap(s, idx, i);
             solve(s, idx + 1);
             swap(s, idx, i);
         }
 
+        // Delete each character in turn and solve the remainder.
         for (int i = idx; i < s.length(); i++) {
             char tmp = s.charAt(i);
             s.deleteCharAt(i);
@@ -99,6 +104,11 @@ public class ScrabbleSolver {
 
         System.out.println(String.format("Running in %s mode\n********************************", parallel ? "parallel" : "sequential"));
         if (parallel) {
+            // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
+            // Starting points are:
+            //     - Choose each character in the input and make it the first character. This character will not be touched during solving.
+            //     - Choose each character in the input and delete it. Solve the remaining sequence.
+            // Therefore, the max parallelism factor is twice the length of the input.
             List<StringBuilder> startingPoints = new ArrayList<>();
             for (int i = 0; i < s.length(); i++) {
                 swap(s, 0, i);
