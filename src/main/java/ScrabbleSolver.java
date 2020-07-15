@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -82,18 +83,37 @@ public class ScrabbleSolver {
         DICTIONARY.addAll(CharStreams.readLines(new InputStreamReader(in)));
     }
 
+    private static void printHelp(Options ops) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("java -jar ScrabbleSolver.java",
+                            "Solve scrabble sequences\n\n",
+                            ops,
+                            "",
+                            true);
+    }
+
     private static void parseOptions(String[] args) throws ParseException {
         Options ops = new Options();
         ops.addOption(Option.builder("s").longOpt("sequential").desc("Run in sequential mode").build());
         ops.addOption(Option.builder("n").longOpt("min-characters").desc("Minimum characters for match to print").hasArg().build());
-        ops.addOption(Option.builder("i").longOpt("input").desc("Input sequence to solve").hasArg().required().build());
+        ops.addOption(Option.builder("i").longOpt("input").desc("Input sequence to solve").hasArg().build());
+        ops.addOption(Option.builder("h").longOpt("help").desc("Help").build());
 
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = parser.parse(ops, args);
+        if (cmd.hasOption("h")) {
+            printHelp(ops);
+            System.exit(0);
+        }
 
         parallel = !cmd.hasOption("s");
         minSize = cmd.hasOption("n") ? Integer.parseInt(cmd.getOptionValue("n")) : minSize;
-        input = cmd.getOptionValue("i");
+        if (cmd.hasOption("i")) {
+            input = cmd.getOptionValue("i");
+        } else {
+            System.out.println("The --input option is required" + "\n" + "Try --help");
+            System.exit(0);
+        }
     }
 
     public static void main(String[] args) throws IOException, ParseException {
@@ -102,7 +122,9 @@ public class ScrabbleSolver {
         StringBuilder s = new StringBuilder(input);
         readDictionary();
 
-        System.out.println(String.format("Running in %s mode\n********************************", parallel ? "parallel" : "sequential"));
+        System.out.println(String.format("Running in %s mode. Outputting %d characters or greater.\n********************************",
+                                         parallel ? "parallel" : "sequential",
+                                         minSize));
         if (parallel) {
             // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
             // Starting points are:
