@@ -1,6 +1,3 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,13 +8,24 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class ScrabbleSolver {
-    private static final boolean PARALLEL = true;
-    private static final int MIN_SIZE = 5;
-    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
+import com.google.common.io.CharStreams;
+
+public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
     private static final ConcurrentMap<String, Boolean> FOUND = new ConcurrentHashMap<>();
+
+    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    private static String input;
+    private static boolean parallel = true;
+    private static int minSize = 5;
 
     private static void swap(StringBuilder s, int idx0, int idx1) {
         char tmp = s.charAt(idx0);
@@ -44,7 +52,7 @@ public class ScrabbleSolver {
         }
 
         if (!FOUND.containsKey(str) && DICTIONARY.contains(str)) {
-            if (str.length() >= MIN_SIZE) {
+            if (str.length() >= minSize) {
                 System.out.println(str);
             }
             FOUND.put(str, true);
@@ -66,26 +74,31 @@ public class ScrabbleSolver {
 
     private static void readDictionary() throws IOException {
         InputStream in = ScrabbleSolver.class.getResourceAsStream("/dictionary.txt");
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
-            String line = reader.readLine();
-            while (line != null) {
-                DICTIONARY.add(line);
-                line = reader.readLine();
-            }
-        }
+        DICTIONARY.addAll(CharStreams.readLines(new InputStreamReader(in)));
     }
 
-    public static void main(String[] args) throws IOException {
-        if (args.length != 1) {
-            System.out.println("Pass input.");
-            System.exit(1);
-        }
+    private static void parseOptions(String[] args) throws ParseException {
+        Options ops = new Options();
+        ops.addOption(Option.builder("s").longOpt("sequential").desc("Run in sequential mode").build());
+        ops.addOption(Option.builder("n").longOpt("min-characters").desc("Minimum characters for match to print").hasArg().build());
+        ops.addOption(Option.builder("i").longOpt("input").desc("Input sequence to solve").hasArg().required().build());
 
-        String input = args[0];
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd = parser.parse(ops, args);
+
+        parallel = !cmd.hasOption("s");
+        minSize = cmd.hasOption("n") ? Integer.parseInt(cmd.getOptionValue("n")) : minSize;
+        input = cmd.getOptionValue("i");
+    }
+
+    public static void main(String[] args) throws IOException, ParseException {
+        parseOptions(args);
+
         StringBuilder s = new StringBuilder(input);
         readDictionary();
 
-        if (PARALLEL) {
+        System.out.println(String.format("Running in %s mode\n********************************", parallel ? "parallel" : "sequential"));
+        if (parallel) {
             List<StringBuilder> startingPoints = new ArrayList<>();
             for (int i = 0; i < s.length(); i++) {
                 swap(s, 0, i);
