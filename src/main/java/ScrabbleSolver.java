@@ -1,6 +1,9 @@
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -13,8 +16,8 @@ public class ScrabbleSolver {
     private static final int MIN_SIZE = 5;
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    private static Set<String> s_dictionary = new HashSet<>();
-    private static ConcurrentMap<String, Boolean> s_found = new ConcurrentHashMap<>();
+    private static final Set<String> DICTIONARY = new HashSet<>();
+    private static final ConcurrentMap<String, Boolean> FOUND = new ConcurrentHashMap<>();
 
     private static void swap(StringBuilder s, int idx0, int idx1) {
         char tmp = s.charAt(idx0);
@@ -40,11 +43,11 @@ public class ScrabbleSolver {
             }
         }
 
-        if (!s_found.containsKey(str) && s_dictionary.contains(str)) {
+        if (!FOUND.containsKey(str) && DICTIONARY.contains(str)) {
             if (str.length() >= MIN_SIZE) {
                 System.out.println(str);
             }
-            s_found.put(str, true);
+            FOUND.put(str, true);
         }
 
         for (int i = idx; i < s.length(); i++) {
@@ -62,10 +65,11 @@ public class ScrabbleSolver {
     }
 
     private static void readDictionary() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader("dictionary.txt"))) {
+        InputStream in = ScrabbleSolver.class.getResourceAsStream("/dictionary.txt");
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
             String line = reader.readLine();
             while (line != null) {
-                s_dictionary.add(line);
+                DICTIONARY.add(line);
                 line = reader.readLine();
             }
         }
@@ -100,6 +104,6 @@ public class ScrabbleSolver {
             solve(s, 0);
         }
 
-        System.out.println(String.format("********************************\nFound %s words for %s", s_found.size(), input));
+        System.out.println(String.format("********************************\nFound %s words for %s", FOUND.size(), input));
     }
 }
