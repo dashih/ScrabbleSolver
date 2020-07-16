@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -27,6 +29,7 @@ public class ScrabbleSolver {
     private static String input;
     private static boolean parallel = true;
     private static int minSize = 5;
+    private static Pattern pattern = Pattern.compile(".*");
 
     private static void swap(StringBuilder s, int idx0, int idx1) {
         char tmp = s.charAt(idx0);
@@ -55,9 +58,10 @@ public class ScrabbleSolver {
 
         // Check if match and output if match is unique.
         if (!FOUND.containsKey(str) && DICTIONARY.contains(str)) {
-            if (str.length() >= minSize) {
+            if (str.length() >= minSize && pattern.matcher(str).matches()) {
                 System.out.println(str);
             }
+
             FOUND.put(str, true);
         }
 
@@ -97,6 +101,7 @@ public class ScrabbleSolver {
         ops.addOption(Option.builder("s").longOpt("sequential").desc("Run in sequential mode").build());
         ops.addOption(Option.builder("n").longOpt("min-characters").desc("Minimum characters for match to print").hasArg().build());
         ops.addOption(Option.builder("i").longOpt("input").desc("Input sequence to solve").hasArg().build());
+        ops.addOption(Option.builder("r").longOpt("regex").desc("Regex to filter matches").hasArg().build());
         ops.addOption(Option.builder("h").longOpt("help").desc("Help").build());
 
         CommandLineParser parser = new DefaultParser();
@@ -108,6 +113,7 @@ public class ScrabbleSolver {
 
         parallel = !cmd.hasOption("s");
         minSize = cmd.hasOption("n") ? Integer.parseInt(cmd.getOptionValue("n")) : minSize;
+        pattern = cmd.hasOption("r") ? Pattern.compile(cmd.getOptionValue("r")) : pattern;
         if (cmd.hasOption("i")) {
             input = cmd.getOptionValue("i");
         } else {
