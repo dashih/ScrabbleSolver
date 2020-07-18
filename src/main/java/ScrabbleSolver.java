@@ -57,12 +57,8 @@ public class ScrabbleSolver {
         }
 
         // Check if match and output if match is unique.
-        if (!FOUND.containsKey(str) && DICTIONARY.contains(str)) {
-            if (str.length() >= minSize && pattern.matcher(str).matches()) {
-                System.out.println(str);
-            }
-
-            FOUND.put(str, true);
+        if (FOUND.putIfAbsent(str, true) == null && DICTIONARY.contains(str) && pattern.matcher(str).matches()) {
+            System.out.println(str);
         }
 
         // Select each character in turn and swap it to the start of this iteration level.
