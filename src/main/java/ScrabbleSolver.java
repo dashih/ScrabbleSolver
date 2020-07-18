@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -26,10 +29,11 @@ public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
     private static final ConcurrentMap<String, Boolean> FOUND = new ConcurrentHashMap<>();
     private static final AtomicLong NUM_PROCESSED = new AtomicLong();
+    private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
 
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final int PAD = 80;
-    private static final int PRINT_STATUS_EVERY = 1000003;
+    private static final int STATUS_UPDATE_MS = 500;
 
     private static String input;
     private static boolean parallel = true;
@@ -71,11 +75,7 @@ public class ScrabbleSolver {
             System.out.println(StringUtils.rightPad(str, PAD));
         }
 
-        // Periodically print the processed count to show progress.
-        long processedCount = NUM_PROCESSED.incrementAndGet();
-        if (processedCount % PRINT_STATUS_EVERY == 0) {
-            System.out.printf("Processed: %,d\r", processedCount);
-        }
+        NUM_PROCESSED.incrementAndGet();
 
         // Select each character in turn and swap it to the start of this iteration level.
         // Solve the remainder of the sequence.
@@ -97,6 +97,13 @@ public class ScrabbleSolver {
     private static void readDictionary() throws IOException {
         InputStream in = ScrabbleSolver.class.getResourceAsStream("/dictionary.txt");
         DICTIONARY.addAll(CharStreams.readLines(new InputStreamReader(in)));
+    }
+
+    private static void startStatusReporting() {
+        EXECUTOR.scheduleAtFixedRate(() -> System.out.printf("Processing: %,d\r", NUM_PROCESSED.get()),
+                                     0,
+                                     STATUS_UPDATE_MS,
+                                     TimeUnit.MILLISECONDS);
     }
 
     private static void printHelp(Options ops) {
@@ -140,10 +147,11 @@ public class ScrabbleSolver {
         StringBuilder s = new StringBuilder(input);
         readDictionary();
 
-        System.out.println(String.format("Running in %s mode. Outputting %d characters or greater.\n%s",
+        System.out.println(String.format("Running in %s mode\nOutputting matches of %d characters or greater\n%s",
                                          parallel ? "parallel" : "sequential",
                                          minSize,
                                          StringUtils.repeat('*', PAD)));
+        startStatusReporting();
         if (parallel) {
             // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
             // Starting points are:
@@ -168,7 +176,8 @@ public class ScrabbleSolver {
             solve(s, 0);
         }
 
-        System.out.println(String.format("%s\nFound %,d words for %s (processed %,d)",
+        EXECUTOR.shutdown();
+        System.out.println(String.format("%s\nFound %,d words for %s\nProcessed %,d permutations",
                                          StringUtils.repeat('*', PAD),
                                          FOUND.size(),
                                          input,
