@@ -56,7 +56,7 @@ public class ScrabbleSolver {
             }
         }
 
-        // Check if match and output if match is unique.
+        // Check if unique match and matches regex.
         if (FOUND.putIfAbsent(str, true) == null && DICTIONARY.contains(str) && pattern.matcher(str).matches()) {
             System.out.println(str);
         }
