@@ -10,15 +10,17 @@ repositories {
 }
 
 dependencies {
-    compile group: 'com.google.guava', name: 'guava', version: '29.0-jre'
-    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.11'
-
+    implementation group: 'com.google.guava', name: 'guava', version: '29.0-jre'
+    implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.11'
 }
 
 jar {
     manifest {
         attributes 'Main-Class': 'ScrabbleSolver'
     }
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }}
+
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }}
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
