@@ -12,6 +12,8 @@ repositories {
 dependencies {
     compile group: 'com.google.guava', name: 'guava', version: '29.0-jre'
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.11'
+
 }
 
 jar {

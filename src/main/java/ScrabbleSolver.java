@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
@@ -17,14 +18,18 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.io.CharStreams;
 
 public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
     private static final ConcurrentMap<String, Boolean> FOUND = new ConcurrentHashMap<>();
+    private static final AtomicInteger NUM_PROCESSED = new AtomicInteger();
 
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final int PAD = 80;
+    private static final int PRINT_STATUS_EVERY = 1000003;
 
     private static String input;
     private static boolean parallel = true;
@@ -56,9 +61,20 @@ public class ScrabbleSolver {
             }
         }
 
-        // Check if unique match and matches regex.
-        if (FOUND.putIfAbsent(str, true) == null && DICTIONARY.contains(str) && pattern.matcher(str).matches()) {
-            System.out.println(str);
+        // Check if unique match, greater than min size,  and matches regex.
+        if (FOUND.putIfAbsent(str, true) == null &&
+            str.length() >= minSize &&
+            DICTIONARY.contains(str) &&
+            pattern.matcher(str).matches()) {
+
+            // Pad spaces to the right to overwrite any status output.
+            System.out.println(StringUtils.rightPad(str, PAD));
+        }
+
+        // Periodically print the processed count to show progress.
+        int processedCount = NUM_PROCESSED.incrementAndGet();
+        if (processedCount % PRINT_STATUS_EVERY == 0) {
+            System.out.printf("Processed: %,d\r", processedCount);
         }
 
         // Select each character in turn and swap it to the start of this iteration level.
@@ -124,9 +140,10 @@ public class ScrabbleSolver {
         StringBuilder s = new StringBuilder(input);
         readDictionary();
 
-        System.out.println(String.format("Running in %s mode. Outputting %d characters or greater.\n********************************",
+        System.out.println(String.format("Running in %s mode. Outputting %d characters or greater.\n%s",
                                          parallel ? "parallel" : "sequential",
-                                         minSize));
+                                         minSize,
+                                         StringUtils.repeat('*', PAD)));
         if (parallel) {
             // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
             // Starting points are:
@@ -151,6 +168,10 @@ public class ScrabbleSolver {
             solve(s, 0);
         }
 
-        System.out.println(String.format("********************************\nFound %s words for %s", FOUND.size(), input));
+        System.out.println(String.format("%s\nFound %,d words for %s (processed %,d)",
+                                         StringUtils.repeat('*', PAD),
+                                         FOUND.size(),
+                                         input,
+                                         NUM_PROCESSED.get()));
     }
 }
