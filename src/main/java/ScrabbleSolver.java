@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
@@ -25,7 +25,7 @@ import com.google.common.io.CharStreams;
 public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
     private static final ConcurrentMap<String, Boolean> FOUND = new ConcurrentHashMap<>();
-    private static final AtomicInteger NUM_PROCESSED = new AtomicInteger();
+    private static final AtomicLong NUM_PROCESSED = new AtomicLong();
 
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final int PAD = 80;
@@ -72,7 +72,7 @@ public class ScrabbleSolver {
         }
 
         // Periodically print the processed count to show progress.
-        int processedCount = NUM_PROCESSED.incrementAndGet();
+        long processedCount = NUM_PROCESSED.incrementAndGet();
         if (processedCount % PRINT_STATUS_EVERY == 0) {
             System.out.printf("Processed: %,d\r", processedCount);
         }
