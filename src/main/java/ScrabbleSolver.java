@@ -147,7 +147,10 @@ public class ScrabbleSolver {
         StringBuilder s = new StringBuilder(input);
         readDictionary();
 
-        System.out.println(String.format("Running in %s mode\nOutputting matches of %d characters or greater\n%s",
+        System.out.println(String.format("Input: %s (%d length, %d blanks)\nRunning in %s mode\nOutputting matches of %d length or greater\n%s",
+                                         input,
+                                         input.length(),
+                                         StringUtils.countMatches(input, "*"),
                                          parallel ? "parallel" : "sequential",
                                          minSize,
                                          StringUtils.repeat('*', PAD)));
