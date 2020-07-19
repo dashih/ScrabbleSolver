@@ -27,7 +27,7 @@ import com.google.common.io.CharStreams;
 public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
     private static final AtomicLong NUM_PROCESSED = new AtomicLong();
-    private static final ThreadLocal<Integer> NUM_PROCESSED_TL = new ThreadLocal<>();
+    private static final ThreadLocal<Long> NUM_PROCESSED_TL = new ThreadLocal<>();
     private static final ConcurrentMap<String, Boolean> SOLUTIONS = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
 
@@ -185,12 +185,12 @@ public class ScrabbleSolver {
             }
 
             startingPoints.parallelStream().forEach(startingPoint -> {
-                NUM_PROCESSED_TL.set(0);
+                NUM_PROCESSED_TL.set(0L);
                 solve(startingPoint, startingPoint.length() == s.length() ? 1 : 0);
                 NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
             });
         } else {
-            NUM_PROCESSED_TL.set(0);
+            NUM_PROCESSED_TL.set(0L);
             solve(s, 0);
             NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
         }
