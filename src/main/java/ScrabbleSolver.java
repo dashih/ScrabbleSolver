@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -26,7 +27,7 @@ import com.google.common.io.CharStreams;
 
 public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
-    private static final ConcurrentMap<String, Boolean> PROCESSED = new ConcurrentHashMap<>();
+    private static final AtomicLong NUM_PROCESSED = new AtomicLong();
     private static final ConcurrentMap<String, Boolean> SOLUTIONS = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
 
@@ -47,9 +48,8 @@ public class ScrabbleSolver {
 
     private static void permute(StringBuilder s, int idx) {
         if (idx == s.length()) {
-            // This is a unique permutation.
             String str = s.toString();
-            PROCESSED.putIfAbsent(str, true);
+            NUM_PROCESSED.incrementAndGet();
 
             // Check if it's a unique solution that meets the criteria.
             if (DICTIONARY.contains(str) &&
@@ -107,7 +107,7 @@ public class ScrabbleSolver {
     }
 
     private static void startStatusReporting() {
-        EXECUTOR.scheduleAtFixedRate(() -> System.out.printf("Processing: %,d\r", PROCESSED.size()),
+        EXECUTOR.scheduleAtFixedRate(() -> System.out.printf("Processing: %,d\r", NUM_PROCESSED.get()),
                                      0,
                                      STATUS_UPDATE_MS,
                                      TimeUnit.MILLISECONDS);
@@ -192,10 +192,10 @@ public class ScrabbleSolver {
         }
 
         EXECUTOR.shutdown();
-        System.out.println(String.format("%s\nFound %,d words for %s\nProcessed %,d permutations",
+        System.out.println(String.format("%s\nFound %,d solutions for %s\nProcessed %,d",
                                          StringUtils.repeat('*', PAD),
                                          SOLUTIONS.size(),
                                          input,
-                                         PROCESSED.size()));
+                                         NUM_PROCESSED.get()));
     }
 }
