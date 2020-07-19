@@ -33,7 +33,7 @@ public class ScrabbleSolver {
     private static String input;
     private static boolean parallel = true;
     private static int minSize = 5;
-    private static Pattern pattern = Pattern.compile(".*");
+    private static Pattern pattern = Pattern.compile("[A-Z]+");
 
     private static void swap(StringBuilder s, int idx0, int idx1) {
         char tmp = s.charAt(idx0);
