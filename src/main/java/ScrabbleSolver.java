@@ -5,14 +5,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -28,6 +27,7 @@ import com.google.common.io.CharStreams;
 public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
     private static final AtomicLong NUM_PROCESSED = new AtomicLong();
+    private static final ThreadLocal<Integer> NUM_PROCESSED_TL = new ThreadLocal<>();
     private static final ConcurrentMap<String, Boolean> SOLUTIONS = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
 
@@ -49,7 +49,7 @@ public class ScrabbleSolver {
     private static void permute(StringBuilder s, int idx) {
         if (idx == s.length()) {
             String str = s.toString();
-            NUM_PROCESSED.incrementAndGet();
+            NUM_PROCESSED_TL.set(NUM_PROCESSED_TL.get() + 1);
 
             // Check if it's a unique solution that meets the criteria.
             if (DICTIONARY.contains(str) &&
@@ -185,10 +185,14 @@ public class ScrabbleSolver {
             }
 
             startingPoints.parallelStream().forEach(startingPoint -> {
+                NUM_PROCESSED_TL.set(0);
                 solve(startingPoint, startingPoint.length() == s.length() ? 1 : 0);
+                NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
             });
         } else {
+            NUM_PROCESSED_TL.set(0);
             solve(s, 0);
+            NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
         }
 
         EXECUTOR.shutdown();
