@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -27,8 +26,8 @@ import com.google.common.io.CharStreams;
 
 public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
-    private static final ConcurrentMap<String, Boolean> FOUND = new ConcurrentHashMap<>();
-    private static final AtomicLong NUM_PROCESSED = new AtomicLong();
+    private static final ConcurrentMap<String, Boolean> PROCESSED = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, Boolean> SOLUTIONS = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
 
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -46,13 +45,46 @@ public class ScrabbleSolver {
         s.setCharAt(idx1, tmp);
     }
 
-    private static void solve(StringBuilder s, int idx) {
+    private static void permute(StringBuilder s, int idx) {
         if (idx == s.length()) {
+            // This is a unique permutation.
+            String str = s.toString();
+            PROCESSED.putIfAbsent(str, true);
+
+            // Check if it's a unique solution that meets the criteria.
+            if (DICTIONARY.contains(str) &&
+                SOLUTIONS.putIfAbsent(str, true) == null &&
+                str.length() >= minSize &&
+                pattern.matcher(str).matches()) {
+
+                // Pad spaces to the right to overwrite any status output.
+                System.out.println(StringUtils.rightPad(str, PAD));
+            }
+
             return;
         }
 
-        String str = s.toString();
+        for (int i = idx; i < s.length(); i++) {
+            swap(s, idx, i);
+            permute(s, idx + 1);
+            swap(s, idx, i);
+        }
+    }
 
+    private static void solveWithDeletions(StringBuilder s, int idx) {
+        // Consider all permutations for this string.
+        permute(s, idx);
+
+        // Solve recursively for every permutation of deletions.
+        for (int i = idx; i < s.length(); i++) {
+            char tmp = s.charAt(i);
+            s.deleteCharAt(i);
+            solveWithDeletions(s, idx);
+            s.insert(i, tmp);
+        }
+    }
+
+    private static void solve(StringBuilder s, int idx) {
         // Blanks! For each blank, choose A-Z and solve each.
         for (int i = 0; i < s.length(); i++) {
             if (s.charAt(i) == '*') {
@@ -65,34 +97,9 @@ public class ScrabbleSolver {
             }
         }
 
-        // Check if unique match, greater than min size,  and matches regex.
-        if (FOUND.putIfAbsent(str, true) == null &&
-            str.length() >= minSize &&
-            DICTIONARY.contains(str) &&
-            pattern.matcher(str).matches()) {
-
-            // Pad spaces to the right to overwrite any status output.
-            System.out.println(StringUtils.rightPad(str, PAD));
-        }
-
-        NUM_PROCESSED.incrementAndGet();
-
-        // Select each character in turn and swap it to the start of this iteration level.
-        // Solve the remainder of the sequence.
-        for (int i = idx; i < s.length(); i++) {
-            swap(s, idx, i);
-            solve(s, idx + 1);
-            swap(s, idx, i);
-        }
-
-        // Delete each character in turn and solve the remainder.
-        for (int i = idx; i < s.length(); i++) {
-            char tmp = s.charAt(i);
-            s.deleteCharAt(i);
-            solve(s, idx);
-            s.insert(i, tmp);
-        }
+        solveWithDeletions(s, idx);
     }
+
 
     private static void readDictionary() throws IOException {
         InputStream in = ScrabbleSolver.class.getResourceAsStream("/dictionary.txt");
@@ -100,7 +107,7 @@ public class ScrabbleSolver {
     }
 
     private static void startStatusReporting() {
-        EXECUTOR.scheduleAtFixedRate(() -> System.out.printf("Processing: %,d\r", NUM_PROCESSED.get()),
+        EXECUTOR.scheduleAtFixedRate(() -> System.out.printf("Processing: %,d\r", PROCESSED.size()),
                                      0,
                                      STATUS_UPDATE_MS,
                                      TimeUnit.MILLISECONDS);
@@ -187,8 +194,8 @@ public class ScrabbleSolver {
         EXECUTOR.shutdown();
         System.out.println(String.format("%s\nFound %,d words for %s\nProcessed %,d permutations",
                                          StringUtils.repeat('*', PAD),
-                                         FOUND.size(),
+                                         SOLUTIONS.size(),
                                          input,
-                                         NUM_PROCESSED.get()));
+                                         PROCESSED.size()));
     }
 }
