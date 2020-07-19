@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
@@ -29,11 +26,9 @@ public class ScrabbleSolver {
     private static final AtomicLong NUM_PROCESSED = new AtomicLong();
     private static final ThreadLocal<Long> NUM_PROCESSED_TL = new ThreadLocal<>();
     private static final ConcurrentMap<String, Boolean> SOLUTIONS = new ConcurrentHashMap<>();
-    private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
 
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final int PAD = 80;
-    private static final int STATUS_UPDATE_MS = 500;
 
     private static String input;
     private static boolean parallel = true;
@@ -49,7 +44,6 @@ public class ScrabbleSolver {
     private static void permute(StringBuilder s, int idx) {
         if (idx == s.length()) {
             String str = s.toString();
-            NUM_PROCESSED_TL.set(NUM_PROCESSED_TL.get() + 1);
 
             // Check if it's a unique solution that meets the criteria.
             if (DICTIONARY.contains(str) &&
@@ -61,6 +55,7 @@ public class ScrabbleSolver {
                 System.out.println(StringUtils.rightPad(str, PAD));
             }
 
+            NUM_PROCESSED_TL.set(NUM_PROCESSED_TL.get() + 1);
             return;
         }
 
@@ -104,13 +99,6 @@ public class ScrabbleSolver {
     private static void readDictionary() throws IOException {
         InputStream in = ScrabbleSolver.class.getResourceAsStream("/dictionary.txt");
         DICTIONARY.addAll(CharStreams.readLines(new InputStreamReader(in)));
-    }
-
-    private static void startStatusReporting() {
-        EXECUTOR.scheduleAtFixedRate(() -> System.out.printf("Processing: %,d\r", NUM_PROCESSED.get()),
-                                     0,
-                                     STATUS_UPDATE_MS,
-                                     TimeUnit.MILLISECONDS);
     }
 
     private static void printHelp(Options ops) {
@@ -166,36 +154,36 @@ public class ScrabbleSolver {
                                          minSize,
                                          pattern,
                                          StringUtils.repeat('*', PAD)));
-        startStatusReporting();
-        if (parallel) {
-            // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
-            // Starting points are:
-            //     - Choose each character in the input and make it the first character. This character will not be touched during solving.
-            //     - Choose each character in the input and delete it. Solve the remaining sequence.
-            // Therefore, the max parallelism factor is twice the length of the input.
-            List<StringBuilder> startingPoints = new ArrayList<>();
-            for (int i = 0; i < s.length(); i++) {
-                swap(s, 0, i);
-                startingPoints.add(new StringBuilder(s.toString()));
+        try (StatusReporter reporter = new StatusReporter()) {
+            if (parallel) {
+                // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
+                // Starting points are:
+                //     - Choose each character in the input and make it the first character. This character will not be touched during solving.
+                //     - Choose each character in the input and delete it. Solve the remaining sequence.
+                // Therefore, the max parallelism factor is twice the length of the input.
+                List<StringBuilder> startingPoints = new ArrayList<>();
+                for (int i = 0; i < s.length(); i++) {
+                    swap(s, 0, i);
+                    startingPoints.add(new StringBuilder(s.toString()));
 
-                char tmp = s.charAt(0);
-                s.deleteCharAt(0);
-                startingPoints.add(new StringBuilder(s.toString()));
-                s.insert(0, tmp);
-            }
+                    char tmp = s.charAt(0);
+                    s.deleteCharAt(0);
+                    startingPoints.add(new StringBuilder(s.toString()));
+                    s.insert(0, tmp);
+                }
 
-            startingPoints.parallelStream().forEach(startingPoint -> {
+                startingPoints.parallelStream().forEach(startingPoint -> {
+                    NUM_PROCESSED_TL.set(0L);
+                    solve(startingPoint, startingPoint.length() == s.length() ? 1 : 0);
+                    NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
+                });
+            } else {
                 NUM_PROCESSED_TL.set(0L);
-                solve(startingPoint, startingPoint.length() == s.length() ? 1 : 0);
+                solve(s, 0);
                 NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
-            });
-        } else {
-            NUM_PROCESSED_TL.set(0L);
-            solve(s, 0);
-            NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
+            }
         }
 
-        EXECUTOR.shutdown();
         System.out.println(String.format("%s\nFound %,d solutions for %s\nProcessed %,d",
                                          StringUtils.repeat('*', PAD),
                                          SOLUTIONS.size(),
