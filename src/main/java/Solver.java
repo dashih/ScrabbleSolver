@@ -20,6 +20,9 @@ public final class Solver {
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final int PAD = 80;
 
+    // At what point do we also parallelize permuting. 9 characters including 2 blanks seems to be a good threshold.
+    private static final int PERMUTATION_PARALLEL_THRESH = 9;
+
     private final Set<String> m_dictionary;
     private final boolean m_parallel;
     private final int m_minCharacters;
@@ -65,7 +68,21 @@ public final class Solver {
             reporter.start();
 
             if (m_parallel) {
-                combinations.parallelStream().forEach(combination -> permute(combination, 0, solutions, reporter));
+                combinations.parallelStream().forEach(combination -> {
+                    if (combination.length() >= PERMUTATION_PARALLEL_THRESH) {
+                        List<StringBuilder> permStartPoints = new ArrayList<>();
+                        for (int i = 0; i < combination.length(); i++) {
+                            swap(combination, 0, i);
+                            permStartPoints.add(new StringBuilder(combination));
+                            swap(combination, 0, i);
+                        }
+
+                        permStartPoints.parallelStream().forEach(
+                            startPoint -> permute(startPoint, 1, solutions, reporter));
+                    } else {
+                        permute(combination, 0, solutions, reporter);
+                    }
+                });
             } else {
                 combinations.forEach(combination -> permute(combination, 0, solutions, reporter));
             }
