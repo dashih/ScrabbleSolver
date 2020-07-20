@@ -58,11 +58,16 @@ public final class Solver {
         try (StatusReporter reporter = new StatusReporter()) {
             reporter.start();
 
-            List<StringBuilder> combinations = new ArrayList<>();
-            getCombinationswithBlanks(new StringBuilder(input), combinations);
+            if (m_parallel) {
+                List<StringBuilder> combinations = new ArrayList<>();
+                getCombinationswithBlanks(new StringBuilder(input), combinations);
 
-            Stream<StringBuilder> stream = m_parallel ? combinations.parallelStream() : combinations.stream();
-            stream.forEach(combination -> permute(combination, 0, solutions, reporter));
+                Stream<StringBuilder> stream = m_parallel ? combinations.parallelStream() : combinations.stream();
+                stream.forEach(combination -> permute(combination, 0, solutions, reporter));
+            } else {
+                combineWithBlanks(new StringBuilder(input), solutions, reporter);
+            }
+
             numProcessed = reporter.get();
         }
 
@@ -76,6 +81,38 @@ public final class Solver {
     private void populateDictionary() throws IOException {
         InputStream in = getClass().getResourceAsStream("/dictionary.txt");
         m_dictionary.addAll(CharStreams.readLines(new InputStreamReader(in)));
+    }
+
+    private void combineWithBlanks(StringBuilder s, ConcurrentMap<String, Boolean> solutions, StatusReporter reporter) {
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == '*') {
+                for (char c : ALPHABET.toCharArray()) {
+                    s.setCharAt(i, c);
+                    combineWithBlanks(s, solutions, reporter);
+                }
+
+                return;
+            }
+        }
+
+        combine(s, new StringBuilder(), 0, solutions, reporter);
+    }
+
+    private void combine(
+        StringBuilder s,
+        StringBuilder build,
+        int idx,
+        ConcurrentMap<String, Boolean> solutions,
+        StatusReporter reporter) {
+
+        for (int i = idx; i < s.length(); i++) {
+            build.append(s.charAt(i));
+
+            permute(new StringBuilder(build), 0, solutions, reporter);
+
+            combine(s, build, i + 1, solutions, reporter);
+            build.deleteCharAt(build.length() - 1);
+        }
     }
 
     private static void getCombinationswithBlanks(StringBuilder s, List<StringBuilder> combinations) {
