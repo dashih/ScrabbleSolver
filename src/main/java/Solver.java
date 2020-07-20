@@ -61,9 +61,7 @@ public final class Solver {
             if (m_parallel) {
                 List<StringBuilder> combinations = new ArrayList<>();
                 getCombinationswithBlanks(new StringBuilder(input), combinations);
-
-                Stream<StringBuilder> stream = m_parallel ? combinations.parallelStream() : combinations.stream();
-                stream.forEach(combination -> permute(combination, 0, solutions, reporter));
+                combinations.parallelStream().forEach(combination -> permute(combination, 0, solutions, reporter));
             } else {
                 combineWithBlanks(new StringBuilder(input), solutions, reporter);
             }

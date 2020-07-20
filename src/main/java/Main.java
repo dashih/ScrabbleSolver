@@ -11,7 +11,7 @@ import org.apache.commons.cli.ParseException;
 public class Main {
     private static void printHelp(Options ops) {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("java -jar ScrabbleSolver.java",
+        formatter.printHelp("java -jar ScrabbleSolver.jar",
                             "Solve scrabble sequences\n\n",
                             ops,
                             "",
