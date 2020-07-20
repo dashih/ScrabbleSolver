@@ -12,7 +12,7 @@ public final class StatusReporter implements AutoCloseable {
 
     // Initial delay hardcoded to 2 seconds to not get stuck on (processed 0) where matches have clearly been found.
     private static final int STATUS_COUNT_INITIAL_DELAY = 2; // seconds
-    private static final int STATUS_COUNT_S = 2; // seconds
+    private static final int STATUS_COUNT_S = 20; // seconds
 
     private final ScheduledExecutorService m_executor = Executors.newSingleThreadScheduledExecutor();
     private final ConcurrentMap<Long, Long> m_counts = new ConcurrentHashMap<>();
