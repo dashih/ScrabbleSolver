@@ -56,6 +56,8 @@ public final class Solver {
         ConcurrentMap<String, Boolean> solutions = new ConcurrentHashMap<>();
         long numProcessed = 0;
         try (StatusReporter reporter = new StatusReporter()) {
+            reporter.start();
+
             List<StringBuilder> combinations = new ArrayList<>();
             getCombinationswithBlanks(new StringBuilder(input), combinations);
 
