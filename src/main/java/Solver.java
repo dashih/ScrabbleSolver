@@ -18,7 +18,6 @@ import com.google.common.math.BigIntegerMath;
 
 public final class Solver {
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final int PAD = 80;
 
     // At what point do we also parallelize permuting. 9 characters including 2 blanks seems to be a good threshold.
     private static final int PERMUTATION_PARALLEL_THRESH = 9;
@@ -55,7 +54,7 @@ public final class Solver {
                 m_parallel ? "parallel" : "sequential",
                 m_minCharacters,
                 m_regex,
-                StringUtils.repeat('*', PAD)));
+                StringUtils.repeat('*', Main.CLI_PAD)));
 
         ConcurrentMap<String, Boolean> solutions = new ConcurrentHashMap<>();
 
@@ -91,7 +90,7 @@ public final class Solver {
         }
 
         System.out.println(String.format("%s\nFound %,d solutions for %s\nProcessed %,d permutations",
-                StringUtils.repeat('*', PAD),
+                StringUtils.repeat('*', Main.CLI_PAD),
                 solutions.size(),
                 input,
                 numProcessed));
@@ -144,7 +143,7 @@ public final class Solver {
                     m_regex.matcher(str).matches()) {
 
                 // Pad spaces to the right to overwrite any status output.
-                System.out.println(StringUtils.rightPad(str, PAD));
+                System.out.println(StringUtils.rightPad(str, Main.CLI_PAD));
             }
 
             reporter.increment();

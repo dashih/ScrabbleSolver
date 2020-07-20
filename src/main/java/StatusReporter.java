@@ -40,11 +40,14 @@ public final class StatusReporter implements AutoCloseable {
                 m_spinnerPos = 0;
             }
 
-            System.out.printf("[%s%c%s] %.2f%%\r",
-                StringUtils.repeat('=', pos == 0 ? 0 : pos - 1),
-                SPINNER[m_spinnerPos],
-                StringUtils.repeat(' ', STATUS_BAR_SIZE - pos),
-                percDone * 100.0f);
+            String status = StringUtils.rightPad(
+                String.format("[%s%c%s] %.2f%%",
+                    StringUtils.repeat('=', pos == 0 ? 0 : pos - 1),
+                    SPINNER[m_spinnerPos],
+                    StringUtils.repeat(' ', STATUS_BAR_SIZE - pos),
+                    percDone * 100.0f),
+                Main.CLI_PAD);
+            System.out.print(status + "\r");
         }, 0, STATUS_UI_MS, TimeUnit.MILLISECONDS);
 
         m_executor.scheduleAtFixedRate(this::get, STATUS_COUNT_INITIAL_DELAY, STATUS_COUNT_S, TimeUnit.SECONDS);

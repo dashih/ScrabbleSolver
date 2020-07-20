@@ -9,6 +9,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 public class Main {
+    static final int CLI_PAD = 80;
+
     private static void printHelp(Options ops) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("java -jar ScrabbleSolver.jar",
