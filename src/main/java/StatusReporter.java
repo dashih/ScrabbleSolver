@@ -8,43 +8,43 @@ import org.apache.commons.lang3.StringUtils;
 
 public final class StatusReporter implements AutoCloseable {
     private static final int STATUS_UI_MS = 500; // milliseconds
-    private static final int STATUS_BAR_SIZE = 8;
+    private static final int STATUS_BAR_SIZE = 40;
+    private static final char[] SPINNER = "|/-\\".toCharArray();
 
     // Initial delay hardcoded to 2 seconds to not get stuck on (processed 0) where matches have clearly been found.
     private static final int STATUS_COUNT_INITIAL_DELAY = 2; // seconds
     private static final int STATUS_COUNT_S = 10; // seconds
 
-    private final ScheduledExecutorService m_executor = Executors.newSingleThreadScheduledExecutor();
-    private final ConcurrentMap<Long, Long> m_counts = new ConcurrentHashMap<>();
+    private final long m_goal;
+    private final ScheduledExecutorService m_executor;
+    private final ConcurrentMap<Long, Long> m_counts;
 
-    private int m_cursor = 0;
-    private boolean m_direction = true;
     private long m_count;
+    private int m_spinnerPos;
+
+    StatusReporter(long goal) {
+        m_goal = goal;
+        m_executor = Executors.newSingleThreadScheduledExecutor();
+        m_counts = new ConcurrentHashMap<>();
+        m_count = 0L;
+        m_spinnerPos = 0;
+    }
 
     void start() {
         m_executor.scheduleAtFixedRate(() -> {
-            int leftPad = m_cursor;
-            int rightPad = STATUS_BAR_SIZE - leftPad - 1;
-            System.out.printf("|%s=%s| (processed %,d)\r",
-                StringUtils.repeat('-', leftPad),
-                StringUtils.repeat('-', rightPad),
-                m_count);
+            float percDone = (float)m_count / m_goal;
+            int pos = Math.round(percDone * STATUS_BAR_SIZE);
 
-            if (m_direction) {
-                if (m_cursor == STATUS_BAR_SIZE - 1) {
-                    m_cursor--;
-                    m_direction = false;
-                } else {
-                    m_cursor++;
-                }
-            } else {
-                if (m_cursor == 0) {
-                    m_cursor++;
-                    m_direction = true;
-                } else {
-                    m_cursor--;
-                }
+            m_spinnerPos++;
+            if (m_spinnerPos == SPINNER.length) {
+                m_spinnerPos = 0;
             }
+
+            System.out.printf("[%s%c%s] %.2f%%\r",
+                StringUtils.repeat('=', pos == 0 ? 0 : pos - 1),
+                SPINNER[m_spinnerPos],
+                StringUtils.repeat(' ', STATUS_BAR_SIZE - pos),
+                percDone * 100.0f);
         }, 0, STATUS_UI_MS, TimeUnit.MILLISECONDS);
 
         m_executor.scheduleAtFixedRate(this::get, STATUS_COUNT_INITIAL_DELAY, STATUS_COUNT_S, TimeUnit.SECONDS);

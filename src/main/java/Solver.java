@@ -7,13 +7,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.CharStreams;
+import com.google.common.math.BigIntegerMath;
 
 public final class Solver {
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -54,22 +55,25 @@ public final class Solver {
                 StringUtils.repeat('*', PAD)));
 
         ConcurrentMap<String, Boolean> solutions = new ConcurrentHashMap<>();
+
+        List<StringBuilder> combinations = new ArrayList<>();
+        AtomicLong totalPerms = new AtomicLong(0L);
+        getCombinationswithBlanks(new StringBuilder(input), combinations, totalPerms);
+
         long numProcessed = 0;
-        try (StatusReporter reporter = new StatusReporter()) {
+        try (StatusReporter reporter = new StatusReporter(totalPerms.get())) {
             reporter.start();
 
             if (m_parallel) {
-                List<StringBuilder> combinations = new ArrayList<>();
-                getCombinationswithBlanks(new StringBuilder(input), combinations);
                 combinations.parallelStream().forEach(combination -> permute(combination, 0, solutions, reporter));
             } else {
-                combineWithBlanks(new StringBuilder(input), solutions, reporter);
+                combinations.forEach(combination -> permute(combination, 0, solutions, reporter));
             }
 
             numProcessed = reporter.get();
         }
 
-        System.out.println(String.format("%s\nFound %,d solutions for %s\nProcessed %,d",
+        System.out.println(String.format("%s\nFound %,d solutions for %s\nProcessed %,d permutations",
                 StringUtils.repeat('*', PAD),
                 solutions.size(),
                 input,
@@ -81,62 +85,33 @@ public final class Solver {
         m_dictionary.addAll(CharStreams.readLines(new InputStreamReader(in)));
     }
 
-    private void combineWithBlanks(StringBuilder s, ConcurrentMap<String, Boolean> solutions, StatusReporter reporter) {
+    private static void getCombinationswithBlanks(
+        StringBuilder s, List<StringBuilder> combinations, AtomicLong totalPermutations) {
+
         for (int i = 0; i < s.length(); i++) {
             if (s.charAt(i) == '*') {
                 for (char c : ALPHABET.toCharArray()) {
                     s.setCharAt(i, c);
-                    combineWithBlanks(s, solutions, reporter);
+                    getCombinationswithBlanks(s, combinations, totalPermutations);
                 }
 
                 return;
             }
         }
 
-        combine(s, new StringBuilder(), 0, solutions, reporter);
-    }
-
-    private void combine(
-        StringBuilder s,
-        StringBuilder build,
-        int idx,
-        ConcurrentMap<String, Boolean> solutions,
-        StatusReporter reporter) {
-
-        for (int i = idx; i < s.length(); i++) {
-            build.append(s.charAt(i));
-
-            permute(new StringBuilder(build), 0, solutions, reporter);
-
-            combine(s, build, i + 1, solutions, reporter);
-            build.deleteCharAt(build.length() - 1);
-        }
-    }
-
-    private static void getCombinationswithBlanks(StringBuilder s, List<StringBuilder> combinations) {
-        for (int i = 0; i < s.length(); i++) {
-            if (s.charAt(i) == '*') {
-                for (char c : ALPHABET.toCharArray()) {
-                    s.setCharAt(i, c);
-                    getCombinationswithBlanks(s, combinations);
-                }
-
-                return;
-            }
-        }
-
-        getCombinations(s, new StringBuilder(), 0, combinations);
+        getCombinations(s, new StringBuilder(), 0, combinations, totalPermutations);
     }
 
     private static void getCombinations(
-        StringBuilder s, StringBuilder build, int idx, List<StringBuilder> combinations) {
+        StringBuilder s, StringBuilder build, int idx, List<StringBuilder> combinations, AtomicLong totalPermutations) {
 
         for (int i = idx; i < s.length(); i++) {
             build.append(s.charAt(i));
 
             combinations.add(new StringBuilder(build));
+            totalPermutations.addAndGet(BigIntegerMath.factorial(build.length()).longValueExact());
 
-            getCombinations(s, build, i + 1, combinations);
+            getCombinations(s, build, i + 1, combinations, totalPermutations);
             build.deleteCharAt(build.length() - 1);
         }
     }
