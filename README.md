@@ -13,7 +13,7 @@ Additionally, if a given combination is large enough, attempt to parallelize the
 Speedup numbers!
 
 ### Intel Xeon CPU E5-2630 v3 @ 2.40GHz 16-core (~2016 Lenovo P720 workstation)
-Speedup = 14.4x
+Speedup = 6.95x
 ```
 $ time java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8 --regex="A.+" --sequential
 Input: *ABCDE*FGHI (11 length, 2 blanks)
@@ -51,6 +51,33 @@ sys     0m17.872s
 ```
 
 ### Intel Core i9-9880H 8-core (2019 Macbook Pro 16-inch)
-Speedup = 4x
+Speedup = 4.62x
 ```
+$ time java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8 --regex="A.+" --sequential
+Input: *ABCDE*FGHI (11 length, 2 blanks)
+Running in sequential mode
+Outputting matches of 8 length or greater
+Outputting matches of pattern: A.+
+********************************************************************************
+ACIDHEAD                                                                        
+ABIDANCE                                                                        
+ABDICATE                                                                        
+********************************************************************************
+Found 2,677 solutions for *ABCDE*FGHI
+Processed 5,533,760,661 permutations
+java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8    682.83s user 3.85s system 100% cpu 11:25.90 total
+
+$ time java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8 --regex="A.+"             
+Input: *ABCDE*FGHI (11 length, 2 blanks)
+Running in parallel mode
+Outputting matches of 8 length or greater
+Outputting matches of pattern: A.+
+********************************************************************************
+ABDICATE                                                                        
+ACIDHEAD                                                                        
+ABIDANCE                                                                        
+********************************************************************************
+Found 2,677 solutions for *ABCDE*FGHI
+Processed 5,533,760,661 permutations
+java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8   2253.61s user 5.27s system 1516% cpu 2:28.96 total
 ```
