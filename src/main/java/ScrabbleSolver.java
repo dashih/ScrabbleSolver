@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
@@ -23,9 +22,8 @@ import com.google.common.io.CharStreams;
 
 public class ScrabbleSolver {
     private static final Set<String> DICTIONARY = new HashSet<>();
-    private static final AtomicLong NUM_PROCESSED = new AtomicLong();
-    private static final ThreadLocal<Long> NUM_PROCESSED_TL = new ThreadLocal<>();
     private static final ConcurrentMap<String, Boolean> SOLUTIONS = new ConcurrentHashMap<>();
+    private static final StatusReporter REPORTER = new StatusReporter();
 
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final int PAD = 80;
@@ -55,7 +53,7 @@ public class ScrabbleSolver {
                 System.out.println(StringUtils.rightPad(str, PAD));
             }
 
-            NUM_PROCESSED_TL.set(NUM_PROCESSED_TL.get() + 1);
+            REPORTER.increment();
             return;
         }
 
@@ -143,51 +141,48 @@ public class ScrabbleSolver {
         readDictionary();
 
         System.out.println(String.format("Input: %s (%d length, %d blanks)\n" +
-                                         "Running in %s mode\n" +
-                                         "Outputting matches of %d length or greater\n" +
-                                         "Outputting matches of pattern: %s\n" +
-                                         "%s",
-                                         input,
-                                         input.length(),
-                                         StringUtils.countMatches(input, "*"),
-                                         parallel ? "parallel" : "sequential",
-                                         minSize,
-                                         pattern,
-                                         StringUtils.repeat('*', PAD)));
-        try (StatusReporter reporter = new StatusReporter()) {
-            if (parallel) {
-                // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
-                // Starting points are:
-                //     - Choose each character in the input and make it the first character. This character will not be touched during solving.
-                //     - Choose each character in the input and delete it. Solve the remaining sequence.
-                // Therefore, the max parallelism factor is twice the length of the input.
-                List<StringBuilder> startingPoints = new ArrayList<>();
-                for (int i = 0; i < s.length(); i++) {
-                    swap(s, 0, i);
-                    startingPoints.add(new StringBuilder(s.toString()));
+                        "Running in %s mode\n" +
+                        "Outputting matches of %d length or greater\n" +
+                        "Outputting matches of pattern: %s\n" +
+                        "%s",
+                input,
+                input.length(),
+                StringUtils.countMatches(input, "*"),
+                parallel ? "parallel" : "sequential",
+                minSize,
+                pattern,
+                StringUtils.repeat('*', PAD)));
+        REPORTER.start();
+        if (parallel) {
+            // Generate a list of starting points that can be safely computed in parallel and produce all matches when collectively solved.
+            // Starting points are:
+            //     - Choose each character in the input and make it the first character. This character will not be touched during solving.
+            //     - Choose each character in the input and delete it. Solve the remaining sequence.
+            // Therefore, the max parallelism factor is twice the length of the input.
+            List<StringBuilder> startingPoints = new ArrayList<>();
+            for (int i = 0; i < s.length(); i++) {
+                swap(s, 0, i);
+                startingPoints.add(new StringBuilder(s.toString()));
 
-                    char tmp = s.charAt(0);
-                    s.deleteCharAt(0);
-                    startingPoints.add(new StringBuilder(s.toString()));
-                    s.insert(0, tmp);
-                }
-
-                startingPoints.parallelStream().forEach(startingPoint -> {
-                    NUM_PROCESSED_TL.set(0L);
-                    solve(startingPoint, startingPoint.length() == s.length() ? 1 : 0);
-                    NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
-                });
-            } else {
-                NUM_PROCESSED_TL.set(0L);
-                solve(s, 0);
-                NUM_PROCESSED.addAndGet(NUM_PROCESSED_TL.get());
+                char tmp = s.charAt(0);
+                s.deleteCharAt(0);
+                startingPoints.add(new StringBuilder(s.toString()));
+                s.insert(0, tmp);
             }
+
+            startingPoints.parallelStream().forEach(startingPoint -> {
+                solve(startingPoint, startingPoint.length() == s.length() ? 1 : 0);
+            });
+        } else {
+            solve(s, 0);
         }
 
+        long numProcessed = REPORTER.get();
+        REPORTER.close();
         System.out.println(String.format("%s\nFound %,d solutions for %s\nProcessed %,d",
-                                         StringUtils.repeat('*', PAD),
-                                         SOLUTIONS.size(),
-                                         input,
-                                         NUM_PROCESSED.get()));
+                StringUtils.repeat('*', PAD),
+                SOLUTIONS.size(),
+                input,
+                numProcessed));
     }
 }

@@ -1,28 +1,34 @@
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.StringUtils;
 
 public final class StatusReporter implements AutoCloseable {
-    private static final int STATUS_UPDATE_MS = 200;
+    private static final int STATUS_UI_MS = 500; // milliseconds
     private static final int STATUS_BAR_SIZE = 8;
 
-    private final ScheduledExecutorService m_executor;
-    private int m_cursor;
-    private boolean m_direction;
+    // Initial delay hardcoded to 2 seconds to not get stuck on (processed 0) where matches have clearly been found.
+    private static final int STATUS_COUNT_INITIAL_DELAY = 2; // seconds
+    private static final int STATUS_COUNT_S = 2; // seconds
 
-    StatusReporter() {
-        m_executor = Executors.newSingleThreadScheduledExecutor();
-        m_cursor = 0;
-        m_direction = true;
+    private final ScheduledExecutorService m_executor = Executors.newSingleThreadScheduledExecutor();
+    private final ConcurrentMap<Long, Long> m_counts = new ConcurrentHashMap<>();
+
+    private int m_cursor = 0;
+    private boolean m_direction = true;
+    private long m_count;
+
+    void start() {
         m_executor.scheduleAtFixedRate(() -> {
             int leftPad = m_cursor;
             int rightPad = STATUS_BAR_SIZE - leftPad - 1;
-            System.out.printf("|%s=%s|\r",
+            System.out.printf("|%s=%s| (processed %,d)\r",
                 StringUtils.repeat('-', leftPad),
-                StringUtils.repeat('-', rightPad));
+                StringUtils.repeat('-', rightPad),
+                m_count);
 
             if (m_direction) {
                 if (m_cursor == STATUS_BAR_SIZE - 1) {
@@ -39,7 +45,19 @@ public final class StatusReporter implements AutoCloseable {
                     m_cursor--;
                 }
             }
-        }, 0, STATUS_UPDATE_MS, TimeUnit.MILLISECONDS);
+        }, 0, STATUS_UI_MS, TimeUnit.MILLISECONDS);
+
+        m_executor.scheduleAtFixedRate(this::get, STATUS_COUNT_INITIAL_DELAY, STATUS_COUNT_S, TimeUnit.SECONDS);
+    }
+
+    long get() {
+        m_count = m_counts.values().stream().mapToLong(Long::longValue).sum();
+        return m_count;
+    }
+
+    void increment() {
+        Long tid = Thread.currentThread().getId();
+        m_counts.put(tid, m_counts.getOrDefault(tid, 0L) + 1);
     }
 
     @Override
