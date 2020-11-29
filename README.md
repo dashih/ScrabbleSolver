@@ -12,6 +12,44 @@ Additionally, if a given combination is large enough, attempt to parallelize the
 ## Benchmarks
 Speedup numbers!
 
+### Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz 48-core (~2020 EC2 c5.24xlarge)
+Speedup = 16.7x
+```
+$ time java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8 --regex="A.+" --sequential
+Input: *ABCDE*FGHI (11 length, 2 blanks)
+Running in sequential mode
+Outputting matches of 8 length or greater
+Outputting matches of pattern: A.+
+********************************************************************************
+ACIDHEAD                                                                        
+ABIDANCE                                                                        
+ABDICATE                                                                        
+********************************************************************************
+Found 2,677 solutions for *ABCDE*FGHI
+Processed 5,533,760,661 permutations
+
+real	9m12.635s
+user	9m20.070s
+sys	0m1.682s
+
+$ time java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8 --regex="A.+"
+Input: *ABCDE*FGHI (11 length, 2 blanks)
+Running in parallel mode
+Outputting matches of 8 length or greater
+Outputting matches of pattern: A.+
+********************************************************************************
+ACIDHEAD                                                                        
+ABIDANCE                                                                        
+ABDICATE                                                                        
+********************************************************************************
+Found 2,677 solutions for *ABCDE*FGHI
+Processed 5,533,760,661 permutations
+
+real	0m33.175s
+user	42m36.708s
+sys	0m20.816s
+```
+
 ### Intel Xeon CPU E5-2630 v3 @ 2.40GHz 16-core (~2016 Lenovo P720 workstation)
 Speedup = 6.95x
 ```
