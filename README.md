@@ -50,44 +50,6 @@ user	42m36.708s
 sys	0m20.816s
 ```
 
-### Intel Xeon CPU E5-2630 v3 @ 2.40GHz 16-core (~2016 Lenovo P720 workstation)
-Speedup = 6.95x
-```
-$ time java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8 --regex="A.+" --sequential
-Input: *ABCDE*FGHI (11 length, 2 blanks)
-Running in sequential mode
-Outputting matches of 8 length or greater
-Outputting matches of pattern: A.+
-********************************************************************************
-ACIDHEAD
-ABIDANCE
-ABDICATE
-********************************************************************************
-Found 2,677 solutions for *ABCDE*FGHI
-Processed 5,533,760,661 permutations
-
-real    12m10.257s
-user    12m11.331s
-sys     0m7.186s
-
-$ time java -jar ScrabbleSolver-6.1.1.jar --input="*ABCDE*FGHI" --min-characters=8 --regex="A.+"
-Input: *ABCDE*FGHI (11 length, 2 blanks)
-Running in parallel mode
-Outputting matches of 8 length or greater
-Outputting matches of pattern: A.+
-********************************************************************************
-ABIDANCE                                                                        
-ACIDHEAD                                                                        
-ABDICATE                                                                        
-********************************************************************************
-Found 2,677 solutions for *ABCDE*FGHI
-Processed 5,533,760,661 permutations
-
-real    1m45.753s
-user    51m39.757s
-sys     0m17.872s
-```
-
 ### Intel Core i9-9880H 8-core (2019 Macbook Pro 16-inch)
 Speedup = 4.62x
 ```
